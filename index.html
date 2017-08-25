@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Slide</title>
+	<style type="text/css">
+		*{
+			margin: 0;
+			padding: 0;
+		}
+		.slide-box{
+			width:800px;
+			height:400px;
+			overflow: hidden;
+			position: relative;
+			z-index: 2;
+			perspective: 600px;
+		}
+		.slide-img{
+			width:100%;
+			display: block;
+		}
+		.slide-anImg-box{
+			width:100%;
+			position: absolute;
+			top: 0;
+			left: 0;
+			z-index: 2;
+			background-repeat: no-repeat;
+			background-size:100% auto;
+		}
+		.slide-btn-prev,
+		.slide-btn-next{
+			position: absolute;
+			width: 20px;
+			height: 20px;
+			line-height: 18px;
+			text-align:center;
+			outline: none;
+			bottom: 0;
+			z-index: 8;
+			color:#fff;
+			font-size: 20px;
+			background-color:rgba(0, 0, 0, 0.5);
+			cursor: pointer;
+		}
+		.slide-btn-prev{
+			left: 0;
+		}
+		.slide-btn-next{
+			right: 0;
+		}
+		.slide-nav{
+			width:80%;
+			height:20px;
+			line-height: 20px;
+			position: absolute;
+			left:10%;
+			bottom:0;
+			z-index: 9;
+			text-align: center;
+		}
+		.slide-nav-li{
+			display: inline-block;
+			width:8px;
+			height:8px;
+			margin:0px 5px;
+			border:1px solid #fff;
+			border-radius:50%;
+			cursor: pointer;
+		}
+		.slide-nav-li.on{
+			background-color:#fff;
+			box-shadow: 2px -1px 4px #555 inset;
+		}
+	</style>
+</head>
+<body>
+
+	<div id="slide" style="margin:20px auto;">
+		<img src="./imgs/1.jpg">
+		<img src="./imgs/2.jpg">
+		<img src="./imgs/3.jpg">
+	</div>
+
+	<script type="text/javascript">
+		var Slide = (function(){
+			function Slide(opt){
+				if(Object.prototype.toString.call(opt) != '[object Object]' || Object.prototype.toString.call(opt.dom) != '[object HTMLDivElement]') throw(Error('arguments[0] is not Object or arguments[0].dom is not Element.')); 
+				this.n = 1,this.lin = 0,
+				this.dom = opt.dom,
+				this.time = opt.time || 4000,
+				this.imgs = this.dom.children,
+				this.imgsUrl = (function(imgs){
+					var ar = []
+					for (var i = 0; i < imgs.length; i++) {
+						ar[i] = imgs[i].src
+					}
+					imgs[0].className = 'slide-img';
+					return ar;
+				})(this.imgs);
+
+				addNav(this);
+				this.run();
+				addBtn(this);
+			};
+
+			function addBtn(sf){
+				for (var i = 0; i < 2; i++) {
+					var btn = document.createElement('button')
+					btn.innerText = i ? '<' : '>';
+					btn.className = i ? 'slide-btn-prev' : 'slide-btn-next';
+					btn.onclick = function(e){sf.ctr(e||window.Event, this);};
+					sf.dom.appendChild(btn)
+				}
+			}
+
+			function addNav(sf){
+				var n = sf.imgsUrl.length;
+				sf.nav = document.createElement('ul');
+				sf.nav.className = 'slide-nav';
+				sf.dom.appendChild(sf.nav);
+				sf.navli = [];
+				for(var i = 0; i < n; i++){
+					sf.navli[i] = document.createElement('li');
+					sf.navli[i].className = 'slide-nav-li';
+					sf.navli[i].onclick = function(e){sf.ckNav(e||window.Event, this);}
+					sf.nav.appendChild(sf.navli[i]);
+				}
+			}
+
+			Slide.prototype.ckNav = function(e,sf) {
+				this.n = this.navli.indexOf(sf);
+				this.fnivl();
+			};
+
+			Slide.prototype.run = function(first_argument) {
+				this.dom.className = this.dom.className ? this.dom.calssName + ' slide-box' : 'slide-box';
+				for (var i = 0; i < this.imgs.length; i++) {
+					this.dom.removeChild(this.imgs[1]);
+				}
+
+				this.rdTime = Date.now();
+
+				this.fnivl();
+			};
+
+			Slide.prototype.ctr = function(e, sf) {
+				clearTimeout(this.tot);
+				this.fnivl(sf.className == 'slide-btn-prev');
+			};
+
+			Slide.prototype.fnivl = function(isPrev) {
+				var sf = this, dn = Date.now();
+				if(sf.ztime && dn - sf.rdTime < sf.ztime*2/3) return;
+
+				if(isPrev) sf.n -= 2;
+
+				sf.navli[sf.lin].className = 'slide-nav-li';
+
+				if(sf.n >= sf.imgsUrl.length) sf.n = 0;
+				if(sf.n < 0) sf.n = sf.imgsUrl.length-1;
+
+				sf.navli[sf.n].className = 'slide-nav-li on';
+
+				sf.lin = sf.n;
+
+				sf.loadImg(sf.imgsUrl[sf.n]);
+				sf.n++;
+				sf.rdTime = dn;
+			};
+
+			Slide.prototype.loadImg = function(imgUrl) {
+				var rd = Math.ceil(Math.random() * 7);
+				this['an'+rd](imgUrl);
+				// this.an1(imgUrl)
+			};
+
+			Slide.prototype.anTo = function(el, i, _t, fnan) {
+				this.dom.appendChild(el);
+				setTimeout(fnan.bind(el), _t);
+			};
+
+			Slide.prototype.anOver = function(ps, imgUrl, _t) {
+				var sf = this;
+				sf.ztime = _t;
+				setTimeout(function(){
+					imgUrl && (sf.imgs[0].src = imgUrl);
+					for (var i = 0; i < ps.length; i++) {
+						sf.dom.removeChild(ps[i]);
+					}
+					
+				}.bind(sf), _t);
+
+				sf.tot = setTimeout(function(){
+					sf.fnivl();
+				}.bind(sf), _t + sf.time);
+			};
+
+			Slide.prototype.createP = function(imgUrl) {
+				var p = document.createElement('p');
+				p.className = 'slide-anImg-box';
+				p.style.backgroundImage = 'url('+imgUrl+')';
+				return p;
+			};
+
+			Slide.prototype.an0 = function(imgUrl) {
+				var _w = 15, _h = 7, le = _w * _h, _t = 2000, _s = 200,
+					w = Math.ceil(this.dom.clientWidth / _w), h = Math.ceil(this.dom.clientHeight / _h),
+					ps = [],
+					_imgUrl = this.imgs[0].src;
+
+				for (var i = _h, n = 0; i >= 0; i--) {
+					for (var j = _w; j >= 0; j--) {
+						ps[n] = this.createP(_imgUrl);
+						ps[n].style.width = w + 'px';
+						ps[n].style.height = h + 'px';
+						ps[n].style.top = i * h + 'px';
+						ps[n].style.left = j * w + 'px';
+						ps[n].style.opacity = 1;
+						ps[n].style.backgroundPosition = -j * w + 'px ' + (-i * h) + 'px';
+						ps[n].style.backgroundSize = this.dom.clientWidth+'px auto';
+						ps[n].style.transform = 'rotateX(0deg)';
+						ps[n].style.transition = 'top '+_t/1000+'s ease-in, left '+_t/1000+'s ease-in, opacity '+(_t+400)/1000+'s ease-in, transform '+_t/1000*1.5+'s ease-in';
+
+						this.anTo(ps[n], n, 40+(_s * (j + i)), function(){
+							this.style.top = parseInt(this.style.top) + 200 + 'px';
+							this.style.left = parseInt(this.style.left) + 200 + 'px';
+							this.style.opacity = 0;
+							this.style.transform = 'rotateX(-180deg)';
+						})
+
+						n++;
+					}
+				}
+
+				this.imgs[0].src = imgUrl;
+				
+				this.anOver(ps, null, 40 + (_s * _w) + _t * 2)
+			}
+
+			Slide.prototype.an1 = function(imgUrl) {
+				var _w = 15, _h = 7, le = _w * _h, _t = 2000, _s = 200,
+					w = Math.ceil(this.dom.clientWidth / _w), h = Math.ceil(this.dom.clientHeight / _h),
+					ps = [];
+
+				for (var i = 0, n = 0; i < _h; i++) {
+					for (var j = 0; j < _w; j++) {
+						ps[n] = this.createP(imgUrl);
+						ps[n].style.width = w + 'px';
+						ps[n].style.height = h + 'px';
+						ps[n].style.top = i * h - 200 + 'px';
+						ps[n].style.left = j * w - 200 + 'px';
+						ps[n].style.opacity = 0;
+						ps[n].style.backgroundPosition = -j * w + 'px ' + (-i * h) + 'px';
+						ps[n].style.backgroundSize = this.dom.clientWidth+'px auto';
+						ps[n].style.transform = 'rotateX(-90deg)';
+						ps[n].style.transition = 'all '+_t/1000+'s';
+
+						this.anTo(ps[n], n, 40+(_s * (j + i)), function(){
+							this.style.top = parseInt(this.style.top) + 200 + 'px';
+							this.style.left = parseInt(this.style.left) + 200 + 'px';
+							this.style.opacity = 1;
+							this.style.transform = 'rotateX(0deg)';
+						})
+
+						n++;
+					}
+				}
+				
+				this.anOver(ps, imgUrl, 40 + (_s * _w) + _t * 2);
+			}
+
+			Slide.prototype.an2 = function(imgUrl) {
+				var le = 20, _t = 400, _s = 100,
+					h = this.dom.clientHeight / le,
+					ps = [];
+
+				for (var i = 0; i < le; i++) {
+					ps[i] = this.createP(imgUrl);
+					ps[i].style.left = -this.dom.clientWidth + 'px';
+					ps[i].style.top = h * i + 'px';
+					ps[i].style.height = h + 'px';
+					ps[i].style.backgroundPosition = '0px '+(-h*i)+'px';
+					ps[i].style.transition = 'left '+_t/1000+'s';
+					
+					this.anTo(ps[i], i, 40+(_s * i), function(){
+						this.style.left = '0px';
+					})
+				}
+
+				this.anOver(ps, imgUrl, 40 + (_s * le) + _t)
+			};
+
+			Slide.prototype.an3 = function(imgUrl) {
+				var le = 20, _t = 1000, _s = 100,
+					h = this.dom.clientHeight / le,
+					ps = [];
+
+				for (var i = 0; i < le; i++) {
+					ps[i] = this.createP(imgUrl);
+					ps[i].style.left = '0px';
+					ps[i].style.top = h * i + 'px';
+					ps[i].style.height = '0px';
+					ps[i].style.backgroundPosition = '0px '+(-h*i)+'px';
+					ps[i].style.transition = 'height '+_t/1000+'s';
+					
+					this.anTo(ps[i], i, 40+(_s * i), function(){
+						this.style.height = h+'px';
+					})
+				}
+
+
+				this.anOver(ps, imgUrl, 40 + (_s * le) + _t)
+
+			};
+
+			Slide.prototype.an4 = function(imgUrl) {
+				var le = 40, _t = 400, _s = 100,
+					w = this.dom.clientWidth / le,
+					ps = [];
+
+				for (var i = 0; i < le; i++) {
+					ps[i] = this.createP(imgUrl);
+					ps[i].style.left = w * i + 'px';
+					ps[i].style.top = -this.dom.clientHeight+'px';
+					ps[i].style.width = w+'px';
+					ps[i].style.height = '100%';
+					ps[i].style.backgroundPosition = (-w*i)+'px 0px';
+					ps[i].style.backgroundSize = this.dom.clientWidth+'px auto';
+					ps[i].style.transition = 'top '+_t/1000+'s';
+					
+					this.anTo(ps[i], i, 40+(_s * i), function(){
+						this.style.top = '0px';
+					})
+				}
+
+				this.anOver(ps, imgUrl, 40 + (_s * le) + _t)
+			};
+
+			Slide.prototype.an5 = function(imgUrl) {
+				var le = 25, _t = 800, _s = 100,
+					w = this.dom.clientWidth / le,
+					ps = [];
+
+				for (var i = 0; i < le; i++) {
+					ps[i] = this.createP(imgUrl);
+					ps[i].style.left = w * i + 'px';
+					ps[i].style.top = '0px';
+					ps[i].style.width = '0px';
+					ps[i].style.height = '100%';
+					ps[i].style.backgroundPosition = (-w*i)+'px 0px';
+					ps[i].style.backgroundSize = this.dom.clientWidth+'px auto';
+					ps[i].style.transition = 'width '+_t/1000+'s';
+					
+					this.anTo(ps[i], i, 40+(_s * i), function(){
+						this.style.width = w+'px';
+					})
+				}
+
+				this.anOver(ps, imgUrl, 40 + (_s * le) + _t)
+			};
+
+			Slide.prototype.an6 = function(imgUrl) {
+				var le = 100, _t = 1200, _s = 20,
+					w = this.dom.clientWidth / le,
+					ps = [];
+
+				for (var i = 0; i < le; i++) {
+					ps[i] = this.createP(imgUrl);
+					ps[i].style.left = w * i + 'px';
+					ps[i].style.top = (i%2 == 0 ? '-' : '') + this.dom.clientHeight+'px';
+					ps[i].style.width = w+'px';
+					ps[i].style.height = '100%';
+					ps[i].style.backgroundPosition = (-w*i)+'px 0px';
+					ps[i].style.backgroundSize = this.dom.clientWidth+'px auto';
+					ps[i].style.transition = 'top '+_t/1000+'s';
+					
+					this.anTo(ps[i], i, 40+(_s * i), function(){
+						this.style.top = '0px';
+					})
+				}
+
+				this.anOver(ps, imgUrl, 40 + (_s * le) + _t)
+			};
+
+			Slide.prototype.an7 = function(imgUrl) {
+				var le = 100, _t = 1200, _s = 20,
+					w = this.dom.clientWidth / le,
+					ps = [];
+
+				for (var i = 0; i < le; i++) {
+					ps[i] = this.createP(imgUrl);
+					ps[i].style.left = w * i + 'px';
+					ps[i].style.top = (i%2 == 0 ? '-' : '') + this.dom.clientHeight+'px';
+					ps[i].style.width = w+'px';
+					ps[i].style.height = '100%';
+					ps[i].style.backgroundPosition = (-w*i)+'px 0px';
+					ps[i].style.backgroundSize = this.dom.clientWidth+'px auto';
+					ps[i].style.transition = 'top '+_t/1000+'s';
+					
+					this.anTo(ps[i], i, 40+(_s * (Math.abs(i-le/2))), function(){
+						this.style.top = '0px';
+					})
+				}
+
+				this.anOver(ps, imgUrl, 40 + (_s * le) + _t)
+			};
+
+			return Slide;
+		}())
+
+		var slide = new Slide({
+			dom:document.getElementById('slide')
+		});
+	</script>
+ 
+</body>
+</html>
